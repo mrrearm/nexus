@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>METEO NEXUS - Castellammare di Stabia</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #00ffff;
+            font-family: 'Rajdhani', monospace;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, #00ffff08 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, #ff006608 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, #00ff4408 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .scan-lines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 255, 255, 0.02) 2px,
+                rgba(0, 255, 255, 0.02) 4px
+            );
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .title {
+            font-family: 'Orbitron', monospace;
+            font-size: 3.5rem;
+            font-weight: 900;
+            background: linear-gradient(45deg, #00ffff, #ff0066, #00ff44);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            letter-spacing: 4px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.4rem;
+            color: #888;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: rgba(10, 10, 10, 0.8);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            border-color: rgba(0, 255, 255, 0.6);
+            box-shadow: 
+                0 0 30px rgba(0, 255, 255, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transform: translateY(-5px);
+        }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ffff, transparent);
+            animation: sweep 3s infinite;
+        }
+        
+        @keyframes sweep {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .card-title {
+            font-family: 'Orbitron', monospace;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #00ffff;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .current-weather {
+            grid-column: 1 / -1;
+            text-align: center;
+            background: rgba(0, 255, 255, 0.05);
+        }
+        
+        .current-temp {
+            font-size: 5rem;
+            font-weight: 900;
+            color: #00ffff;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
+            margin: 20px 0;
+        }
+        
+        .current-desc {
+            font-size: 1.5rem;
+            color: #aaa;
+            margin-bottom: 20px;
+        }
+        
+        .current-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .detail-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+        }
+        
+        .detail-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #00ff44;
+            margin-bottom: 5px;
+        }
+        
+        .detail-label {
+            font-size: 0.9rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .forecast-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+        }
+        
+        .forecast-item {
+            text-align: center;
+            padding: 20px 10px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .forecast-item:hover {
+            border-color: #00ffff;
+            background: rgba(0, 255, 255, 0.1);
+        }
+        
+        .forecast-day {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        
+        .forecast-temp {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #00ffff;
+            margin: 10px 0;
+        }
+        
+        .forecast-desc {
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+        
+        .hourly-scroll {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+        
+        .hourly-scroll::-webkit-scrollbar {
+            height: 6px;
+        }
+        
+        .hourly-scroll::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+        }
+        
+        .hourly-scroll::-webkit-scrollbar-thumb {
+            background: #00ffff;
+            border-radius: 10px;
+        }
+        
+        .hourly-item {
+            min-width: 100px;
+            text-align: center;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+        }
+        
+        .hour {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        
+        .hour-temp {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #00ffff;
+            margin: 5px 0;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #00ff44;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: #888;
+            text-transform: uppercase;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ffff, #00ff44);
+            border-radius: 10px;
+            transition: width 1s ease;
+        }
+        
+        .timestamp {
+            text-align: center;
+            margin-top: 30px;
+            font-size: 0.9rem;
+            color: #666;
+            font-family: 'Orbitron', monospace;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .glow {
+            text-shadow: 0 0 10px currentColor;
+        }
+        
+        @media (max-width: 768px) {
+            .title {
+                font-size: 2.5rem;
+            }
+            
+            .current-temp {
+                font-size: 3.5rem;
+            }
+            
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .current-details {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="scan-lines"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1 class="title">METEO NEXUS</h1>
+            <p class="subtitle">CASTELLAMMARE DI STABIA // SISTEMA METEOROLOGICO AVANZATO</p>
+        </div>
+        
+        <div class="grid">
+            <!-- Condizioni Attuali -->
+            <div class="card current-weather">
+                <h2 class="card-title">STATO ATTUALE</h2>
+                <div class="current-temp pulse">16°C</div>
+                <div class="current-desc">Parzialmente Nuvoloso</div>
+                
+                <div class="current-details">
+                    <div class="detail-item">
+                        <div class="detail-value">68%</div>
+                        <div class="detail-label">Umidità</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-value">15 km/h</div>
+                        <div class="detail-label">Vento</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-value">1013 hPa</div>
+                        <div class="detail-label">Pressione</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-value">12 km</div>
+                        <div class="detail-label">Visibilità</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-value">3</div>
+                        <div class="detail-label">UV Index</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-value">14°C</div>
+                        <div class="detail-label">Perc. Termica</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Previsioni 7 Giorni -->
+            <div class="card">
+                <h2 class="card-title">PREVISIONI SETTIMANALI</h2>
+                <div class="forecast-grid">
+                    <div class="forecast-item">
+                        <div class="forecast-day">Oggi</div>
+                        <div class="forecast-temp">16°/10°</div>
+                        <div class="forecast-desc">Nuvoloso</div>
+                    </div>
+                    <div class="forecast-item">
+                        <div class="forecast-day">Dom</div>
+                        <div class="forecast-temp">18°/12°</div>
+                        <div class="forecast-desc">Sereno</div>
+                    </div>
+                    <div class="forecast-item">
+                        <div class="forecast-day">Lun</div>
+                        <div class="forecast-temp">20°/14°</div>
+                        <div class="forecast-desc">Sole</div>
+                    </div>
+                    <div class="forecast-item">
+                        <div class="forecast-day">Mar</div>
+                        <div class="forecast-temp">19°/13°</div>
+                        <div class="forecast-desc">Variabile</div>
+                    </div>
+                    <div class="forecast-item">
+                        <div class="forecast-day">Mer</div>
+                        <div class="forecast-temp">17°/11°</div>
+                        <div class="forecast-desc">Pioggia</div>
+                    </div>
+                    <div class="forecast-item">
+                        <div class="forecast-day">Gio</div>
+                        <div class="forecast-temp">15°/9°</div>
+                        <div class="forecast-desc">Temporali</div>
+                    </div>
+                    <div class="forecast-item">
+                        <div class="forecast-day">Ven</div>
+                        <div class="forecast-temp">16°/10°</div>
+                        <div class="forecast-desc">Nuvoloso</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Previsioni Orarie -->
+            <div class="card">
+                <h2 class="card-title">PREVISIONI ORARIE</h2>
+                <div class="hourly-scroll">
+                    <div class="hourly-item">
+                        <div class="hour">Ora</div>
+                        <div class="hour-temp glow">16°</div>
+                        <div class="forecast-desc">☁️</div>
+                    </div>
+                    <div class="hourly-item">
+                        <div class="hour">15:00</div>
+                        <div class="hour-temp">17°</div>
+                        <div class="forecast-desc">⛅</div>
+                    </div>
+                    <div class="hourly-item">
+                        <div class="hour">16:00</div>
+                        <div class="hour-temp">18°</div>
+                        <div class="forecast-desc">☀️</div>
+                    </div>
+                    <div class="hourly-item">
+                        <div class="hour">17:00</div>
+                        <div class="hour-temp">17°</div>
+                        <div class="forecast-desc">⛅</div>
+                    </div>
+                    <div class="hourly-item">
+                        <div class="hour">18:00</div>
+                        <div class="hour-temp">16°</div>
+                        <div class="forecast-desc">☁️</div>
+                    </div>
+                    <div class="hourly-item">
+                        <div class="hour">19:00</div>
+                        <div class="hour-temp">15°</div>
+                        <div class="forecast-desc">☁️</div>
+                    </div>
+                    <div class="hourly-item">
+                        <div class="hour">20:00</div>
+                        <div class="hour-temp">14°</div>
+                        <div class="forecast-desc">🌙</div>
+                    </div>
+                    <div class="hourly-item">
+                        <div class="hour">21:00</div>
+                        <div class="hour-temp">13°</div>
+                        <div class="forecast-desc">🌙</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Statistiche Avanzate -->
+            <div class="card">
+                <h2 class="card-title">ANALYTICS METEO</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">68%</div>
+                        <div class="stat-label">Umidità</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 68%"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">15</div>
+                        <div class="stat-label">Vento km/h</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 25%"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">1013</div>
+                        <div class="stat-label">Pressione hPa</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 75%"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">3</div>
+                        <div class="stat-label">UV Index</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 30%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Qualità dell'Aria -->
+            <div class="card">
+                <h2 class="card-title">QUALITÀ ARIA</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" style="color: #00ff44;">BUONA</div>
+                        <div class="stat-label">AQI: 42</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">15</div>
+                        <div class="stat-label">PM2.5 μg/m³</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">28</div>
+                        <div class="stat-label">PM10 μg/m³</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">12</div>
+                        <div class="stat-label">O3 μg/m³</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Condizioni Marine -->
+            <div class="card">
+                <h2 class="card-title">CONDIZIONI MARINE</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">17°C</div>
+                        <div class="stat-label">Temp. Mare</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">0.8m</div>
+                        <div class="stat-label">Altezza Onde</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">SW</div>
+                        <div class="stat-label">Dir. Vento</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">12:30</div>
+                        <div class="stat-label">Alta Marea</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="timestamp" id="timestamp">
+            ULTIMO AGGIORNAMENTO: <span class="glow pulse" id="updateTime"></span>
+        </div>
+    </div>
+    
+    <script>
+        // Aggiorna timestamp
+        function updateTimestamp() {
+            const now = new Date();
+            const timeString = now.toLocaleString('it-IT', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('updateTime').textContent = timeString;
+        }
+        
+        // Simulazione aggiornamento dati
+        function updateWeatherData() {
+            const tempElement = document.querySelector('.current-temp');
+            const baseTemp = 16;
+            const variation = Math.floor(Math.random() * 3) - 1;
+            const newTemp = baseTemp + variation;
+            tempElement.textContent = newTemp + '°C';
+            
+            // Aggiorna altre metriche casuali
+            const humidity = document.querySelector('.detail-value');
+            const newHumidity = 65 + Math.floor(Math.random() * 10);
+            humidity.textContent = newHumidity + '%';
+        }
+        
+        // Inizializza
+        updateTimestamp();
+        setInterval(updateTimestamp, 1000);
+        setInterval(updateWeatherData, 30000);
+        
+        // Effetti di animazione al caricamento
+        window.addEventListener('load', function() {
+            const cards = document.querySelectorAll('.card');
+            cards.forEach((card, index) => {
+                setTimeout(() => {
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(50px)';
+                    card.style.transition = 'all 0.8s ease';
+                    
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, 100);
+                }, index * 200);
+            });
+        });
+        
+        // Effetto glitch casuale
+        setInterval(() => {
+            const title = document.querySelector('.title');
+            if (Math.random() < 0.05) {
+                title.style.textShadow = '2px 0 #ff0066, -2px 0 #00ffff';
+                setTimeout(() => {
+                    title.style.textShadow = '0 0 30px rgba(0, 255, 255, 0.5)';
+                }, 150);
+            }
+        }, 2000);
+    </script>
+</body>
+</html>
